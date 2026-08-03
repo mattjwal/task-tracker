@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Task Tracker</title>
+<style>
+  :root{
+    color-scheme:light;
+    --bg:#f5f6f4;
+    --card:#ffffff;
+    --border:#e4e7e5;
+    --ink:#20262a;
+    --muted:#7c8790;
+    --accent:#4d7ea8;
+    --accent-icy:#9cd2e8;
+    --accent-soft:#e8f0f6;
+    --danger:#c1554a;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    min-height:100vh;
+    background:var(--accent);
+    font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    color:var(--ink);
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:48px 20px;
+  }
+  .app{ width:100%; max-width:660px; }
+  h1{
+    text-align:center;
+    font-weight:600;
+    font-size:20px;
+    letter-spacing:0.2px;
+    margin:0 0 20px;
+    color:#ffffff;
+  }
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:22px;
+    box-shadow:0 1px 2px rgba(20,30,35,0.04), 0 10px 28px rgba(20,30,35,0.06);
+  }
+  .readout{ text-align:center; font-size:13.5px; color:var(--muted); margin-bottom:10px; }
+  .readout strong{ color:var(--ink); font-weight:700; }
+  .progress-track{ width:100%; height:10px; border-radius:5px; background:var(--accent-soft); margin-bottom:16px; overflow:hidden; }
+  .progress-fill{
+    height:100%; border-radius:5px; width:0%;
+    background-image:repeating-linear-gradient(45deg, var(--accent) 0 8px, var(--accent-icy) 8px 16px);
+    background-size:32px 32px;
+    transition:width 0.9s cubic-bezier(.22,.61,.36,1);
+  }
+  .scene-frame{ width:100%; border-radius:12px; overflow:hidden; background:linear-gradient(#d6ebf6,#eef6fa 55%,#f8fafb); margin-bottom:20px; }
+  svg.scene{ width:100%; height:auto; display:block; }
+  .add-row{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+  input[type=text]{
+    flex:1;
+    font-family:inherit;
+    font-size:14px;
+    padding:10px 12px;
+    border:1px solid var(--border);
+    border-radius:10px;
+    background:#fafbfa;
+    color:var(--ink);
+  }
+  input[type=text]::placeholder{ color:var(--muted); }
+  input[type=text]:focus{ outline:none; border-color:var(--accent); }
+  button{ font-family:inherit; border:none; cursor:pointer; background:none; }
+  .add-btn{
+    width:36px; height:36px; border-radius:10px; flex-shrink:0;
+    background:var(--accent); color:#ffffff; font-size:18px; font-weight:600;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .add-btn:hover{ filter:brightness(1.06); }
+  .task-list{ list-style:none; margin:0 0 14px; padding:0; display:flex; flex-direction:column; gap:6px; min-height:120px; max-height:440px; overflow-y:auto; }
+  .task{ display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border); }
+  .task:last-child{ border-bottom:none; }
+  .checkbox{
+    width:18px; height:18px; border-radius:50%; border:1.6px solid #c7ccce; flex-shrink:0; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; color:#ffffff; font-size:11px;
+  }
+  .checkbox:focus{ outline:2px solid var(--accent); outline-offset:2px; }
+  .task.done .checkbox{ background:var(--accent); border-color:var(--accent); }
+  .task-text{ flex:1; font-size:13.5px; word-break:break-word; }
+  .task.done .task-text{ color:var(--muted); text-decoration:line-through; }
+  .del-btn{ color:#c7ccce; font-size:15px; padding:2px 6px; border-radius:6px; }
+  .del-btn:hover{ color:var(--danger); }
+  .empty{ text-align:center; padding:24px 8px; color:var(--muted); font-size:13px; }
+  .reset-row{ text-align:center; }
+  .reset-btn{ color:var(--muted); font-size:12px; text-decoration:underline; text-underline-offset:3px; }
+  .reset-btn:hover{ color:var(--ink); }
+
+  .sky-cloud{ fill:#ffffff; filter:url(#cloudBlur); }
+  .sky-cloud-1{ opacity:0.9; animation:driftCloudA 40s linear infinite; }
+  .sky-cloud-2{ opacity:0.65; animation:driftCloudB 56s linear infinite; animation-delay:-16s; }
+  @keyframes driftCloudA{ from{ transform:translateX(-220px); } to{ transform:translateX(520px); } }
+  @keyframes driftCloudB{ from{ transform:translateX(-260px); } to{ transform:translateX(560px); } }
+
+  .mist{ fill:#ffffff; filter:url(#mistBlur); }
+  .mist-1{ opacity:0.32; animation:driftA 46s linear infinite; }
+  .mist-2{ opacity:0.24; animation:driftB 64s linear infinite; animation-delay:-22s; }
+  .mist-3{ opacity:0.18; animation:driftC 82s linear infinite; animation-delay:-40s; }
+  @keyframes driftA{ from{ transform:translateX(-260px); } to{ transform:translateX(560px); } }
+  @keyframes driftB{ from{ transform:translateX(-300px); } to{ transform:translateX(600px); } }
+  @keyframes driftC{ from{ transform:translateX(-340px); } to{ transform:translateX(640px); } }
+
+  #trailPath{ stroke:var(--accent); stroke-dasharray:1 6; opacity:0.55; }
+
+  .camp-dot{ fill:#c7ccce; transition:fill 0.4s ease; }
+  .camp-dot.reached{ fill:var(--accent); }
+  .camp-dot.pulse{ animation:campPulse 0.55s ease-out; }
+  @keyframes campPulse{ 0%{ transform:scale(1); } 45%{ transform:scale(2.1); } 100%{ transform:scale(1); } }
+
+  #climberPos{ transition:transform 0.7s ease; }
+  .climber-head{ fill:var(--accent); stroke:var(--ink); stroke-width:1; }
+  .climber-limb{ stroke:var(--accent); stroke-width:1.7; stroke-linecap:round; }
+
+  #summitFlag{ transform-box:fill-box; transform-origin:0% 100%; }
+  #summitFlag .flag-pole{ stroke:var(--ink); }
+  #summitFlag .flag-tri{ fill:var(--accent); }
+  #summitFlag.pop{ animation:flagPop 0.6s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes flagPop{ 0%{ transform:scale(0.3) rotate(-20deg); } 60%{ transform:scale(1.2) rotate(6deg); } 100%{ transform:scale(1) rotate(0deg); } }
+
+  .snowflake{ fill:#ffffff; stroke:#dbe4e9; stroke-width:0.4; animation-name:snowFall; animation-timing-function:linear; animation-iteration-count:infinite; }
+  @keyframes snowFall{
+    0%{ transform:translate(0,-6px); opacity:0; }
+    15%{ opacity:0.9; }
+    85%{ opacity:0.6; }
+    100%{ transform:translate(-6px,150px); opacity:0; }
+  }
+
+  .celebration{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; z-index:50; overflow:hidden; }
+  .banner{
+    background:#ffffff; color:var(--ink); border:1px solid var(--border); border-radius:14px;
+    padding:16px 26px; font-size:17px; font-weight:600; text-align:center;
+    box-shadow:0 10px 30px rgba(20,30,35,0.14);
+    animation:bannerPop 0.4s cubic-bezier(.34,1.56,.64,1), bannerFade 0.5s ease-in 3s forwards;
+  }
+  @keyframes bannerPop{ from{ transform:scale(0.6); opacity:0; } to{ transform:scale(1); opacity:1; } }
+  @keyframes bannerFade{ to{ opacity:0; transform:translateY(-6px); } }
+  .confetti-piece{ position:absolute; top:-10px; border-radius:2px; }
+  @keyframes confettiFall{ to{ transform:translateY(105vh) rotate(360deg); opacity:0.1; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Task Tracker</h1>
+  <div class="card">
+    <div class="readout"><strong id="doneCount">0</strong> of <span id="totalCount">0</span> tasks · <span id="percentText">0%</span></div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+    <div class="scene-frame">
+      <svg class="scene" viewBox="0 0 520 260" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <filter id="mistBlur" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="6"/>
+          </filter>
+          <filter id="cloudBlur" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="1.4"/>
+          </filter>
+        </defs>
+
+        <g class="sky-cloud sky-cloud-2">
+          <ellipse cx="380" cy="42" rx="18" ry="8"/>
+          <ellipse cx="367" cy="45" rx="11" ry="6"/>
+          <ellipse cx="393" cy="46" rx="12" ry="6"/>
+        </g>
+        <g class="sky-cloud sky-cloud-1">
+          <ellipse cx="120" cy="35" rx="24" ry="10"/>
+          <ellipse cx="104" cy="39" rx="14" ry="7"/>
+          <ellipse cx="138" cy="40" rx="15" ry="8"/>
+        </g>
+
+        <polygon points="0,260 90,185 150,210 260,55 330,140 400,100 460,190 520,260" fill="#ffffff" stroke="#c9d2d6" stroke-width="1.5" stroke-linejoin="round"/>
+        <polygon points="260,55 330,140 400,100 460,190 520,260 260,260" fill="#eef1f3"/>
+        <polygon points="400,100 460,190 520,260 400,260" fill="#e3e8eb"/>
+
+        <ellipse class="mist mist-3" cx="260" cy="80" rx="80" ry="9"/>
+        <ellipse class="mist mist-2" cx="310" cy="140" rx="110" ry="13"/>
+        <ellipse class="mist mist-1" cx="150" cy="205" rx="130" ry="15"/>
+
+        <line x1="110" y1="205" x2="128" y2="235" stroke="#eef1f3" stroke-width="1.2"/>
+        <line x1="290" y1="100" x2="308" y2="158" stroke="#dbe2e5" stroke-width="1.1"/>
+        <line x1="352" y1="133" x2="372" y2="172" stroke="#d3dadd" stroke-width="1.1"/>
+        <line x1="420" y1="142" x2="440" y2="192" stroke="#cdd5d8" stroke-width="1.1"/>
+
+        <polygon points="30,258 42,242 55,258" fill="#d3dadd"/>
+        <polygon points="50,258 61,247 70,258" fill="#c7ccce"/>
+        <polygon points="458,258 470,244 484,258" fill="#d3dadd"/>
+
+        <g fill="#a9bfae">
+          <polygon points="16,258 20,246 24,258"/>
+          <polygon points="34,258 39,243 44,258"/>
+          <polygon points="490,258 495,244 500,258"/>
+          <polygon points="505,258 509,250 513,258"/>
+        </g>
+
+        <polygon points="260,55 298,102 280,90 263,112 245,96 225,120 210,125" fill="#f7fbfd" stroke="#c9d2d6" stroke-width="1" stroke-linejoin="miter"/>
+        <line x1="255" y1="75" x2="263" y2="95" stroke="#d7e2e7" stroke-width="1"/>
+
+        <g id="summitFlag" transform="translate(260,58)">
+          <line class="flag-pole" x1="0" y1="0" x2="0" y2="-22" stroke-width="1.8"/>
+          <polygon class="flag-tri" points="0,-22 15,-16 0,-10"/>
+        </g>
+
+        <g id="snowLayer"></g>
+
+        <path id="trailPath" d="M260,255 L180,190 L320,150 L215,138 L260,58" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+
+        <circle id="camp0" class="camp-dot reached" cx="0" cy="0" r="4"/>
+        <circle id="camp1" class="camp-dot" cx="0" cy="0" r="4"/>
+        <circle id="camp2" class="camp-dot" cx="0" cy="0" r="4"/>
+
+        <g id="climberPos" transform="translate(260,255)">
+          <line class="climber-limb" x1="0" y1="-9" x2="0" y2="0"/>
+          <line class="climber-limb" x1="0" y1="-6" x2="-5" y2="-1"/>
+          <line class="climber-limb" x1="0" y1="-6" x2="5" y2="-1"/>
+          <line class="climber-limb" x1="0" y1="0" x2="-4" y2="8"/>
+          <line class="climber-limb" x1="0" y1="0" x2="4" y2="8"/>
+          <circle class="climber-head" cx="0" cy="-12.5" r="3.4"/>
+        </g>
+      </svg>
+    </div>
+
+    <div class="add-row">
+      <input type="text" id="taskInput" placeholder="Add a task..." maxlength="80">
+      <button class="add-btn" id="addBtn" type="button" aria-label="Add task">+</button>
+    </div>
+    <ul class="task-list" id="taskList"></ul>
+
+    <div class="reset-row">
+      <button class="reset-btn" id="resetBtn" type="button">Reset climb</button>
+    </div>
+  </div>
+</div>
+<div class="celebration" id="celebration"></div>
+<script>
+(function(){
+  var STORAGE_KEY = 'everestTracker.simple.tasks.v1';
+  var CELEBRATED_KEY = 'everestTracker.simple.celebrated.v1';
+
+  var CAMPS = [
+    { id:'camp0', pct:0 },
+    { id:'camp1', pct:35 },
+    { id:'camp2', pct:70 }
+  ];
+
+  var tasks = [];
+  var celebrated = false;
+  var previousReachedIndex = -1;
+  var initialRender = true;
+
+  var taskInput = document.getElementById('taskInput');
+  var addBtn = document.getElementById('addBtn');
+  var taskListEl = document.getElementById('taskList');
+  var doneCountEl = document.getElementById('doneCount');
+  var totalCountEl = document.getElementById('totalCount');
+  var percentTextEl = document.getElementById('percentText');
+  var progressFill = document.getElementById('progressFill');
+  var climberPos = document.getElementById('climberPos');
+  var summitFlag = document.getElementById('summitFlag');
+  var trailPath = document.getElementById('trailPath');
+  var resetBtn = document.getElementById('resetBtn');
+  var celebrationLayer = document.getElementById('celebration');
+  var snowLayer = document.getElementById('snowLayer');
+  var trailLength = trailPath.getTotalLength();
+
+  var campEls = CAMPS.map(function(c){ return document.getElementById(c.id); });
+
+  function positionCamps(){
+    for(var i=0;i<campEls.length;i++){
+      var pt = trailPath.getPointAtLength((CAMPS[i].pct/100) * trailLength);
+      campEls[i].setAttribute('cx', pt.x);
+      campEls[i].setAttribute('cy', pt.y);
+    }
+  }
+
+  function buildSnow(){
+    var count = 8;
+    for(var i=0;i<count;i++){
+      var flake = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      var x = 190 + Math.random()*140;
+      var r = 1 + Math.random()*1.2;
+      var duration = 5 + Math.random()*5;
+      var delay = Math.random()*7;
+      flake.setAttribute('class','snowflake');
+      flake.setAttribute('cx', x);
+      flake.setAttribute('cy', 30);
+      flake.setAttribute('r', r);
+      flake.style.animationDuration = duration + 's';
+      flake.style.animationDelay = '-' + delay + 's';
+      flake.style.opacity = (0.4 + Math.random()*0.4).toFixed(2);
+      snowLayer.appendChild(flake);
+    }
+  }
+
+  function loadState(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      tasks = raw ? JSON.parse(raw) : [];
+    }catch(e){ tasks = []; }
+    celebrated = localStorage.getItem(CELEBRATED_KEY) === 'true';
+  }
+  function saveTasks(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); }
+  function saveCelebrated(){ localStorage.setItem(CELEBRATED_KEY, celebrated ? 'true' : 'false'); }
+
+  function addTask(text){
+    var clean = (text || '').trim();
+    if(!clean) return;
+    tasks.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2), text: clean, done:false });
+    saveTasks();
+    render();
+  }
+  function toggleTask(id){
+    var t = null;
+    for(var i=0;i<tasks.length;i++){ if(tasks[i].id === id){ t = tasks[i]; break; } }
+    if(!t) return;
+    t.done = !t.done;
+    saveTasks();
+    render();
+  }
+  function deleteTask(id){
+    tasks = tasks.filter(function(t){ return t.id !== id; });
+    saveTasks();
+    render();
+  }
+  function resetClimb(){
+    if(tasks.length === 0) return;
+    var ok = window.confirm('Reset your climb? This clears all tasks.');
+    if(!ok) return;
+    tasks = [];
+    celebrated = false;
+    previousReachedIndex = -1;
+    saveTasks();
+    saveCelebrated();
+    render();
+  }
+
+  function getPercent(){
+    if(tasks.length === 0) return 0;
+    var done = tasks.filter(function(t){ return t.done; }).length;
+    return Math.round((done/tasks.length)*100);
+  }
+
+  function renderTaskList(){
+    taskListEl.innerHTML = '';
+    if(tasks.length === 0){
+      var li = document.createElement('li');
+      li.className = 'empty';
+      li.textContent = 'No tasks yet — add one to start the climb';
+      taskListEl.appendChild(li);
+      return;
+    }
+    tasks.forEach(function(t){
+      var li = document.createElement('li');
+      li.className = 'task' + (t.done ? ' done' : '');
+
+      var box = document.createElement('div');
+      box.className = 'checkbox';
+      box.setAttribute('role','checkbox');
+      box.setAttribute('aria-checked', t.done ? 'true' : 'false');
+      box.tabIndex = 0;
+      box.textContent = t.done ? '✓' : '';
+      box.addEventListener('click', function(){ toggleTask(t.id); });
+      box.addEventListener('keydown', function(e){ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggleTask(t.id); } });
+
+      var span = document.createElement('span');
+      span.className = 'task-text';
+      span.textContent = t.text;
+
+      var del = document.createElement('button');
+      del.className = 'del-btn';
+      del.type = 'button';
+      del.textContent = '×';
+      del.setAttribute('aria-label','Delete task');
+      del.addEventListener('click', function(){ deleteTask(t.id); });
+
+      li.appendChild(box);
+      li.appendChild(span);
+      li.appendChild(del);
+      taskListEl.appendChild(li);
+    });
+  }
+
+  function reachedIndexForPercent(percent){
+    var idx = -1;
+    for(var i=0;i<CAMPS.length;i++){
+      if(percent >= CAMPS[i].pct) idx = i;
+    }
+    return idx;
+  }
+
+  function renderProgress(){
+    var percent = getPercent();
+    var done = tasks.filter(function(t){ return t.done; }).length;
+
+    doneCountEl.textContent = done;
+    totalCountEl.textContent = tasks.length;
+    percentTextEl.textContent = percent + '%';
+    progressFill.style.width = percent + '%';
+
+    var pt = trailPath.getPointAtLength((percent/100) * trailLength);
+    climberPos.setAttribute('transform', 'translate(' + pt.x + ',' + pt.y + ')');
+
+    var reachedIndex = reachedIndexForPercent(percent);
+    for(var i=0;i<campEls.length;i++){
+      campEls[i].classList.toggle('reached', percent >= CAMPS[i].pct);
+    }
+
+    if(percent === 100 && tasks.length > 0){
+      summitFlag.classList.add('reached');
+      if(!celebrated){
+        celebrated = true;
+        saveCelebrated();
+        triggerCelebration();
+        summitFlag.classList.add('pop');
+        setTimeout(function(){ summitFlag.classList.remove('pop'); }, 700);
+      }
+    } else {
+      summitFlag.classList.remove('reached');
+      if(celebrated){
+        celebrated = false;
+        saveCelebrated();
+      }
+    }
+
+    if(!initialRender && reachedIndex > previousReachedIndex){
+      for(var j=previousReachedIndex+1;j<=reachedIndex;j++){
+        (function(el){
+          el.classList.add('pulse');
+          setTimeout(function(){ el.classList.remove('pulse'); }, 600);
+        })(campEls[j]);
+      }
+    }
+    previousReachedIndex = reachedIndex;
+    initialRender = false;
+  }
+
+  function render(){
+    renderTaskList();
+    renderProgress();
+  }
+
+  function triggerCelebration(){
+    celebrationLayer.innerHTML = '';
+
+    var banner = document.createElement('div');
+    banner.className = 'banner';
+    banner.textContent = 'Summit reached!';
+    celebrationLayer.appendChild(banner);
+
+    var colors = ['#4d7ea8','#8fb4cf','#20262a','#e8f0f6'];
+    for(var i=0;i<24;i++){
+      var piece = document.createElement('div');
+      piece.className = 'confetti-piece';
+      var size = 5 + Math.random()*4;
+      piece.style.width = size + 'px';
+      piece.style.height = (size*0.5) + 'px';
+      piece.style.left = (Math.random()*100) + 'vw';
+      piece.style.background = colors[Math.floor(Math.random()*colors.length)];
+      var duration = 1.8 + Math.random()*1.3;
+      var delay = Math.random()*0.5;
+      piece.style.animation = 'confettiFall ' + duration + 's ease-in ' + delay + 's forwards';
+      celebrationLayer.appendChild(piece);
+    }
+
+    setTimeout(function(){ celebrationLayer.innerHTML = ''; }, 3800);
+  }
+
+  addBtn.addEventListener('click', function(){
+    addTask(taskInput.value);
+    taskInput.value = '';
+    taskInput.focus();
+  });
+  taskInput.addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){
+      addTask(taskInput.value);
+      taskInput.value = '';
+    }
+  });
+  resetBtn.addEventListener('click', resetClimb);
+
+  positionCamps();
+  buildSnow();
+  loadState();
+  render();
+})();
+</script>
+</body>
+</html>
